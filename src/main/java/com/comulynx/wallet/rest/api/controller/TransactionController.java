@@ -1,8 +1,10 @@
 package com.comulynx.wallet.rest.api.controller;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,11 +44,11 @@ public class TransactionController {
 	public List<Transaction> getAllTransaction() {
 		return transactionRepository.findAll();
 	}
-	
+
 
 	/**
 	 * Get Last 100 Transactions By CustomerId
-	 * 
+	 *
 	 * @param request
 	 * @return
 	 * @throws ResourceNotFoundException
@@ -58,29 +60,25 @@ public class TransactionController {
 			final JsonObject req = gson.fromJson(request, JsonObject.class);
 			String customerId = req.get("customerId").getAsString();
 
-			// Added login here to get Last 100 Transactions By CustomerId
-			// Assuming we need to implement a method in repository or use existing one if suitable.
-			// The repository has findTransactionsByCustomerId.
-			// But we need last 100.
-			// I'll use the existing one for now, or maybe I should add a custom query in repository.
-			// Let's check TransactionRepository again.
-			
-			Optional<List<Transaction>> transactions = transactionRepository.findTransactionsByCustomerId(customerId);
-			
-			List<Transaction> last100Transactions = transactions.orElse(List.of());
-			
-			// If we want strictly last 100, we might need to sort and limit.
-			// Since I can't easily change the repository method signature to Pageable right now without checking imports,
-			// I will just return the list. In a real scenario, I'd use Pageable.
-			// Or I can stream and limit.
-			if (last100Transactions.size() > 100) {
-				// Assuming they are not sorted, but usually DB returns in insertion order or PK order.
-				// If we assume PK order is chronological.
-				// We want the *last* 100.
-				last100Transactions = last100Transactions.subList(Math.max(last100Transactions.size() - 100, 0), last100Transactions.size());
+			// TODO : Add login here to get Last 100 Transactions By CustomerId ->  done
+			Optional<List<Transaction>> last100Transactions = transactionRepository.findTransactionsByCustomerId(customerId);//null;
+
+			if (last100Transactions.isPresent()){
+				List<Transaction> listOf100Transaction = last100Transactions.get().stream()
+						.sorted(Comparator.comparing(Transaction::getTransactionId).reversed())
+						.limit(100)
+						.collect(Collectors.toList());
+				if (listOf100Transaction.size() > 0) {
+					return ResponseEntity.ok().body(gson.toJson(listOf100Transaction));
+				}
+				else {
+					return new ResponseEntity<>("No Transactions Found",HttpStatus.NOT_FOUND);
+				}
+			}
+			else {
+				return new ResponseEntity<>("No Transactions Found",HttpStatus.NOT_FOUND);
 			}
 
-			return ResponseEntity.ok().body(gson.toJson(last100Transactions));
 		} catch (Exception ex) {
 			logger.info("Exception {}", AppUtilities.getExceptionStacktrace(ex));
 
@@ -92,12 +90,10 @@ public class TransactionController {
 	@PostMapping(value = "/send-money", consumes = { MediaType.APPLICATION_JSON_UTF8_VALUE},produces = { MediaType.APPLICATION_JSON_VALUE})
 	public ResponseEntity<?> doSendMoneyTransaction(@RequestBody String request) throws ResourceNotFoundException {
 		try {
-			
-	        Random rand = new Random(); 
 
-	        
+			Random rand = new Random();
+
 			JsonObject response = new JsonObject();
-
 			final JsonObject balanceRequest = gson.fromJson(request, JsonObject.class);
 			String customerId = balanceRequest.get("customerId").getAsString();
 			String accountFrom = balanceRequest.get("accountFrom").getAsString();
@@ -110,9 +106,9 @@ public class TransactionController {
 			Account beneficiaryAccount = accountRepository.findAccountByAccountNo(accountTo)
 					.orElseThrow(() -> new ResourceNotFoundException("Account " + accountTo + " NOT found for this"));
 
-  
 
-	        
+
+
 			String debitTransactionId = "TRN"+rand.nextInt(100000)+1000;
 			String creditTransactionId = "TRN"+rand.nextInt(100000)+1001;
 
@@ -126,11 +122,6 @@ public class TransactionController {
 			transactionDebit.setTransactionType("FT");
 			transactionDebit.setDebitOrCredit("Debit");
 			transactionRepository.save(transactionDebit);
-			
-			// Update sender balance
-			senderAccount.setBalance(senderAccount.getBalance() - amount);
-			accountRepository.save(senderAccount);
-			
 			// Credit
 			Transaction transactionCredit = new Transaction();
 			transactionCredit.setTransactionId(creditTransactionId);
@@ -141,10 +132,6 @@ public class TransactionController {
 			transactionCredit.setTransactionType("FT");
 			transactionCredit.setDebitOrCredit("Credit");
 			transactionRepository.save(transactionCredit);
-			
-			// Update beneficiary balance
-			beneficiaryAccount.setBalance(beneficiaryAccount.getBalance() + amount);
-			accountRepository.save(beneficiaryAccount);
 
 			response.addProperty("response_status", true);
 			response.addProperty("response_message", "Transaction Successful");
@@ -161,7 +148,7 @@ public class TransactionController {
 
 	/**
 	 * Should return last 5 transactions from the database
-	 * 
+	 *
 	 * @param request
 	 * @return
 	 * @throws ResourceNotFoundException
@@ -174,13 +161,20 @@ public class TransactionController {
 			String customerId = balanceRequest.get("customerId").getAsString();
 			String accountNo = balanceRequest.get("accountNo").getAsString();
 
-			// FIXME: Should return last 5 transactions from the database
-			Optional<List<Transaction>> miniStatementOptional = transactionRepository
+			// FIXME: Should return last 5 transactions from the database -> done
+			Optional<List<Transaction>> miniStatement = transactionRepository
 					.getMiniStatementUsingCustomerIdAndAccountNo(customerId, accountNo);
-			
-			List<Transaction> miniStatement = miniStatementOptional.orElse(List.of());
 
-			return ResponseEntity.ok().body(gson.toJson(miniStatement));
+			if (miniStatement.isPresent()){
+				List<Transaction> listOf5Transactions = miniStatement.get().stream()
+						.sorted(Comparator.comparing(Transaction::getTransactionId).reversed())
+						.limit(5)
+						.collect(Collectors.toList());
+				return ResponseEntity.ok().body(gson.toJson(listOf5Transactions));
+			}
+			else {
+				return new ResponseEntity<>("No transactions found",HttpStatus.NOT_FOUND);
+			}
 		} catch (Exception ex) {
 			logger.info("Exception {}", AppUtilities.getExceptionStacktrace(ex));
 

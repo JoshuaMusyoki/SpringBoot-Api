@@ -38,7 +38,32 @@ public class AccountController {
 		return accountRepository.findAll();
 	}
 
-	
+	@PostMapping("/")
+	public ResponseEntity<?> getAccountForCustomer(@RequestBody String request)throws ResourceNotFoundException{
+		try {
+			JsonObject response = new JsonObject();
+			final JsonObject accountRequest = gson.fromJson(request, JsonObject.class);
+			String customerId = accountRequest.get("customerId").getAsString();
+
+			// TODO : Added logic to find Account by CustomerId->done
+			Optional<Account> account = accountRepository.findAccountByCustomerId(customerId);
+			if (account.isPresent()){
+				response.addProperty("accountNo", account.get().getAccountNo() );
+				response.addProperty("customerId", account.get().getCustomerId() );
+				response.addProperty("balance", account.get().getBalance());
+				response.addProperty("id", account.get().getId());
+
+				//return new ResponseEntity<>(response , HttpStatus.OK);
+				return ResponseEntity.ok().body(gson.toJson(response));
+			}else {
+				return new ResponseEntity<>("No Account found",HttpStatus.NOT_FOUND);
+			}
+
+		}catch ( Exception e){
+			return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
 	@PostMapping("/balance")
 	public ResponseEntity<?> getAccountBalanceByCustomerIdAndAccountNo(@RequestBody String request)
 			throws ResourceNotFoundException {
@@ -47,24 +72,21 @@ public class AccountController {
 
 			final JsonObject balanceRequest = gson.fromJson(request, JsonObject.class);
 			String customerId = balanceRequest.get("customerId").getAsString();
+			String accountNo = balanceRequest.get("accountNo").getAsString();
 
 
-			// TODO : Add logic to find Account balance by CustomerId
-			//Account account = null;
-			Optional<Account> accountOptional = accountRepository.findAccountByCustomerId(customerId);
-			
-			if (accountOptional.isPresent()) {
-				Account account = accountOptional.get();
-				response.addProperty("balance", account.getBalance());
-				response.addProperty("accountNo", account.getAccountNo());
+			// TODO : Add logic to find Account balance by CustomerId->done
+			Optional<Account> account = accountRepository.findAccountByCustomerIdAndAccountNo(customerId, accountNo);
+
+			if (account.isPresent()){
+				response.addProperty("balance", account.get().getBalance());
+				response.addProperty("accountNo", account.get().getAccountNo());
 				return ResponseEntity.ok().body(gson.toJson(response));
-			} else {
-				throw new ResourceNotFoundException("Account not found for customerId: " + customerId);
+			}
+			else {
+				return new ResponseEntity<>("Account does not exist",HttpStatus.NOT_FOUND);
 			}
 
-			/*response.addProperty("balance", account.getBalance());
-			response.addProperty("accountNo", account.getAccountNo());
-			return ResponseEntity.ok().body(gson.toJson(response));*/
 		} catch (Exception ex) {
 			logger.info("Exception {}", AppUtilities.getExceptionStacktrace(ex));
 

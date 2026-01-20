@@ -1,9 +1,8 @@
 package com.comulynx.wallet.rest.api.controller;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
+import com.comulynx.wallet.rest.api.exception.CustomerExistsException;
 import jakarta.validation.Valid;
 
 
@@ -47,9 +46,9 @@ public class CustomerController {
 
 	/**
 	 * Fix Customer Login functionality
-	 * 
+	 *
 	 * Login
-	 * 
+	 *
 	 * @param request
 	 * @return
 	 */
@@ -67,29 +66,33 @@ public class CustomerController {
 			// NB: We are using plain text password for testing Customer login
 			// If customerId doesn't exists throw an error "Customer does not exist"
 			// If password do not match throw an error "Invalid credentials"
-			
-			Optional<Customer> customerOptional = customerRepository.findByCustomerId(customerId);
-			if (!customerOptional.isPresent()) {
-				return new ResponseEntity<>("Customer does not exist", HttpStatus.NOT_FOUND);
+			Optional<Customer> customer = customerRepository.findByCustomerId(customerId);
+
+			if (customer.isPresent()){
+				//log in logic
+				if (customerPIN.equals(customer.get().getPin())){
+					//correct PIN
+					//TODO : Return a JSON object with the following after successful login -> done
+					//Customer Name, Customer ID, email and Customer Account
+					Map<String, Object> customerDetails = new HashMap<>();
+					customerDetails.put("firstName", customer.get().getFirstName());
+					customerDetails.put("lastName", customer.get().getLastName());
+					customerDetails.put("customerId", customer.get().getCustomerId());
+					customerDetails.put("email", customer.get().getEmail());
+
+					return ResponseEntity.status(HttpStatus.OK).body(customerDetails);
+				}else {
+					//wrong pin
+					return new ResponseEntity<>("Wrong Pin", HttpStatus.UNAUTHORIZED);
+				}
+			}else {
+				//customer not present return
+				return new ResponseEntity<>("Account does not exist",HttpStatus.NOT_FOUND);
 			}
-			
-			Customer customer = customerOptional.get();
-			if (!customer.getPin().equals(customerPIN)) {
-				return new ResponseEntity<>("Invalid credentials", HttpStatus.UNAUTHORIZED);
-			}
 
-			//TODO : Return a JSON object with the following after successful login
-			//Customer Name, Customer ID, email and Customer Account 
-			
-			Optional<Account> accountOptional = accountRepository.findAccountByCustomerId(customerId);
-			String accountNo = accountOptional.map(Account::getAccountNo).orElse("N/A");
 
-			response.addProperty("customerName", customer.getFirstName() + " " + customer.getLastName());
-			response.addProperty("customerId", customer.getCustomerId());
-			response.addProperty("email", customer.getEmail());
-			response.addProperty("accountNo", accountNo);
 
-			return ResponseEntity.status(200).body(gson.toJson(response));
+			//return ResponseEntity.status(200).body(HttpStatus.OK);
 
 		} catch (Exception ex) {
 			logger.info("Exception {}", AppUtilities.getExceptionStacktrace(ex));
@@ -100,9 +103,9 @@ public class CustomerController {
 
 	/**
 	 *  Add required logic
-	 *  
+	 *
 	 *  Create Customer
-	 *  
+	 *
 	 * @param customer
 	 * @return
 	 */
@@ -111,31 +114,30 @@ public class CustomerController {
 		try {
 			String customerPIN = customer.getPin();
 			String email = customer.getEmail();
-			
+
 			// TODO : Add logic to Hash Customer PIN here
-			// For now, keeping it plain text as per login logic comment, but ideally should be hashed.
-			// customer.setPin(hash(customerPIN)); 
-			
 			//  : Add logic to check if Customer with provided email, or
 			// customerId exists. If exists, throw a Customer with [?] exists
 			// Exception.
-			
-			if (customerRepository.findByCustomerId(customer.getCustomerId()).isPresent()) {
-				return new ResponseEntity<>("Customer with customerId " + customer.getCustomerId() + " exists", HttpStatus.CONFLICT);
+			Optional<Customer> customerInDb = customerRepository.findByCustomerId(customer.getCustomerId());
+
+
+			if (
+					customerInDb.isPresent() || customerRepository.existsByEmail(customer.getEmail())
+			){
+				throw new CustomerExistsException();
 			}
-			
-			if (customerRepository.findByEmail(email).isPresent()) {
-				return new ResponseEntity<>("Customer with email " + email + " exists", HttpStatus.CONFLICT);
+			else {
+				String accountNo = generateAccountNo(customer.getCustomerId());
+				Account account = new Account();
+				account.setCustomerId(customer.getCustomerId());
+				account.setAccountNo(accountNo);
+				account.setBalance(0.0);
+				accountRepository.save(account);
+
+				return ResponseEntity.ok().body(customerRepository.save(customer));
 			}
 
-			String accountNo = generateAccountNo(customer.getCustomerId());
-			Account account = new Account();
-			account.setCustomerId(customer.getCustomerId());
-			account.setAccountNo(accountNo);
-			account.setBalance(0.0);
-			accountRepository.save(account);
-
-			return ResponseEntity.ok().body(customerRepository.save(customer));
 		} catch (Exception ex) {
 			logger.info("Exception {}", AppUtilities.getExceptionStacktrace(ex));
 
@@ -146,22 +148,43 @@ public class CustomerController {
 
 	/**
 	 *  Add required functionality
-	 *  
+	 *
 	 * generate a random but unique Account No (NB: Account No should be unique
 	 * in your accounts table)
-	 * 
+	 *
 	 */
 	private String generateAccountNo(String customerId) {
-		// TODO : Add logic here - generate a random but unique Account No (NB:
+		// TODO : Add logic here - generate a random but unique Account No (NB: -> done
 		// Account No should be unique in the accounts table)
-		Random rand = new Random();
-		String accountNo = "ACC" + (rand.nextInt(900000) + 100000);
-		
-		// Simple check for uniqueness (in a real app, this might need a loop or DB constraint handling)
-		while (accountRepository.findAccountByAccountNo(accountNo).isPresent()) {
-			accountNo = "ACC" + (rand.nextInt(900000) + 100000);
+		/*
+		1. create random account
+		2. check if it exists
+		3. retry until account is unique (recursion)
+		*/
+		Random random = new Random();
+		StringBuilder accountNo =  new StringBuilder("ACT") ;//+ num1 + num2 + num3 + num4;
+
+		for (int i = 0; i<4 ;i++){
+			accountNo.append(random.nextInt(10));
 		}
-		
-		return accountNo;
+
+		if (checkIfAccountExists(accountNo.toString())){
+			return generateAccountNo(customerId);
+		}
+		else {
+			return accountNo.toString();
+		}
+	}
+
+
+
+	private Boolean checkIfAccountExists(String accountNo){
+		Optional<Account> account = accountRepository.findAccountByAccountNo(accountNo);
+		return account.isPresent();
+	}
+
+	private Boolean isCustomerExist(String customerId){
+		Optional<Customer> customer = customerRepository.findByCustomerId(customerId);
+		return customer.isPresent();
 	}
 }

@@ -38,30 +38,13 @@ public class Customer {
 		this.id = id;
 	}
 
-
 	public String getPin() {
 		return pin;
 	}
 
-
-
-
-
-
-
-
-
 	public void setPin(String pin) {
 		this.pin = pin;
 	}
-
-
-
-
-
-
-
-
 
 	public String getFirstName() {
 		return firstName;
