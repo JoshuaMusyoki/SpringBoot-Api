@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api.exception;
+package com.brokerage.insure.rest.api.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

@@ -1,11 +1,11 @@
-package com.comulynx.wallet.rest.api.repository;
+package com.brokerage.insure.rest.api.repository;
 
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.comulynx.wallet.rest.api.model.Account;
+import com.brokerage.insure.rest.api.model.Account;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {

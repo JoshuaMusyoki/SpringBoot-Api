@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api.controller;
+package com.brokerage.insure.rest.api.controller;
 
 import java.util.Comparator;
 import java.util.List;
@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.comulynx.wallet.rest.api.AppUtilities;
-import com.comulynx.wallet.rest.api.exception.ResourceNotFoundException;
-import com.comulynx.wallet.rest.api.model.Account;
-import com.comulynx.wallet.rest.api.model.Transaction;
-import com.comulynx.wallet.rest.api.repository.AccountRepository;
-import com.comulynx.wallet.rest.api.repository.TransactionRepository;
+import com.brokerage.insure.rest.api.AppUtilities;
+import com.brokerage.insure.rest.api.exception.ResourceNotFoundException;
+import com.brokerage.insure.rest.api.model.Account;
+import com.brokerage.insure.rest.api.model.Transaction;
+import com.brokerage.insure.rest.api.repository.AccountRepository;
+import com.brokerage.insure.rest.api.repository.TransactionRepository;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
