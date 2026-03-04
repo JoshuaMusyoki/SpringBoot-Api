@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api.model;
+package com.brokerage.insure.rest.api.model;
 
 import jakarta.persistence.*;
 

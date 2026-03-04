@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api;
+package com.brokerage.insure.rest.api;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

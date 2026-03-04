@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api;
+package com.brokerage.insure.rest.api;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

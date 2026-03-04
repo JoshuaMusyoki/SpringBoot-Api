@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api.repository;
+package com.brokerage.insure.rest.api.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.comulynx.wallet.rest.api.model.Transaction;
+import com.brokerage.insure.rest.api.model.Transaction;
 
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {

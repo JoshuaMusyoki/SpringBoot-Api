@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api.exception;
+package com.brokerage.insure.rest.api.exception;
 
 public class CustomerExistsException extends Exception{
     public CustomerExistsException(){

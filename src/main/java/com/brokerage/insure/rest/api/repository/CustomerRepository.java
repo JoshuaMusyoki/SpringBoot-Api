@@ -1,4 +1,4 @@
-package com.comulynx.wallet.rest.api.repository;
+package com.brokerage.insure.rest.api.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,12 +9,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.comulynx.wallet.rest.api.model.Customer;
+import com.brokerage.insure.rest.api.model.Customer;
 
 @Repository
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
 	Optional<Customer> findByCustomerId(String customerId);
+
+	Optional<Customer> findByEmail(String email);
 
 	// TODO : Implement the query and function below to delete a customer using Customer Id -> done
 	@Modifying
