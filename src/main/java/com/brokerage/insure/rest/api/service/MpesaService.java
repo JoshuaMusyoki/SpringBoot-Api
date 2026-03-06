@@ -8,6 +8,9 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -37,10 +40,15 @@ public class MpesaService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @Retryable(
+            value = { org.springframework.web.client.HttpServerErrorException.class, java.lang.RuntimeException.class },
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000)
+    )
     public StkResponse sendStkPush(StkRequest request) {
         String accessToken = getAccessToken();
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String password = Base64.getEncoder().encodeToString((shortcode + passkey + timestamp).getBytes());
+        String password = Base64.getEncoder().encodeToString((shortcode.trim() + passkey.trim() + timestamp).getBytes());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -51,6 +59,7 @@ public class MpesaService {
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
 
+        log.info("Attempting STK Push for {}", request.getPhoneNumber());
         try {
             ResponseEntity<StkResponse> response = restTemplate.postForEntity(
                     "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
@@ -58,24 +67,32 @@ public class MpesaService {
                     StkResponse.class
             );
             return response.getBody();
+
         } catch (Exception e) {
             log.error("STK Push failed: {}", e.getMessage());
             throw new RuntimeException("Could not initiate M-Pesa payment");
         }
     }
 
+    @Recover
+    public StkResponse recover(RuntimeException e, StkRequest request) {
+        log.error("All 3 attempts failed. Safaricom Sandbox is likely down.");
+        throw new RuntimeException("Safaricom system is currently unavailable. Please try again in 5 minutes.");
+    }
+
     private @NonNull Map<String, Object> getStringObjectMap(StkRequest request, String password, String timestamp) {
         Map<String, Object> body = new HashMap<>();
+        double amount = (request.getAmount() != null) ? request.getAmount() : 1.0;
         body.put("BusinessShortCode", shortcode);
         body.put("Password", password);
         body.put("Timestamp", timestamp);
         body.put("TransactionType", "CustomerPayBillOnline");
-        body.put("Amount", Math.round(request.getAmount()));
-        body.put("PartyA", request.getPhone()); // Format: 2547xxxxxxxx
+        body.put("Amount", Math.round(amount));
+        body.put("PartyA", request.getPhoneNumber()); // Format: 2547xxxxxxxx
         body.put("PartyB", shortcode);
-        body.put("PhoneNumber", request.getPhone());
+        body.put("PhoneNumber", request.getPhoneNumber());
         body.put("CallBackURL", callbackUrl);
-        body.put("AccountReference", request.getReference());
+        body.put("AccountReference", request.getAccountReference());
         body.put("TransactionDesc", "Insurance Quote Payment");
         return body;
     }
