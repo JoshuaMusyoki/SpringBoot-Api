@@ -32,6 +32,7 @@ public class NotificationService {
                 "\n\nThis code expires in 5 minutes. If you did not request this, please ignore this email.");
 
         mailSender.send(message);
+        System.out.println("[Email Otp] To: " + toEmail +  " | Message: Welcome to Reica! Your verification code is: " + otp);
     }
 
     /**
@@ -42,7 +43,7 @@ public class NotificationService {
     public void sendOtpSms(String phoneNumber, String otp) {
         // TODO: Integrate with a real SMS/WhatsApp gateway (e.g., Twilio, Africa's Talking)
         // For now, we will log it to simulate the sending process.
-        System.out.println("[SMS/WhatsApp Notification] To: " + phoneNumber + 
-                           " | Message: Welcome to Reica! Your verification code is: " + otp);
+       /* System.out.println("[Email Otp] To: " + phoneNumber +
+                           " | Message: Welcome to Reica! Your verification code is: " + otp);*/
     }
 }
